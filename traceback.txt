@@ -1,0 +1,90 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.13.7, pytest-9.0.2, pluggy-1.6.0 -- C:\Users\range\AppData\Local\Programs\Python\Python313\python.exe
+cachedir: .pytest_cache
+rootdir: D:\ML-Pipeline
+plugins: anyio-4.11.0, asyncio-1.3.0, cov-7.0.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 1 item
+
+tests/test_pipeline.py::TestPipeline::test_model_training FAILED         [100%]
+
+================================== FAILURES ===================================
+______________________ TestPipeline.test_model_training _______________________
+
+self = <tests.test_pipeline.TestPipeline object at 0x00000246990DC180>
+pipeline = <src.pipeline_manager.MLPipeline object at 0x00000246990B8C20>
+sample_data =      feature_1   feature_2   feature_3   feature_4   feature_5      target
+0   109.934283   71.692585  107.155747   83...2.487635  -39.522827
+99   95.308257   77.140594  112.592577  124.756326   72.344005  -27.021414
+
+[100 rows x 6 columns]
+
+    def test_model_training(self, pipeline, sample_data):
+        """Test model training"""
+        pipeline.ingest(sample_data)
+        pipeline.engineer_features(auto=True, target_column='target')
+    
+        pipeline.ingest(sample_data)
+        pipeline.engineer_features(auto=True, target_column='target')
+>       pipeline.prepare_training_data(target_column='target')
+
+tests\test_pipeline.py:144: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\pipeline_manager.py:408: in prepare_training_data
+    df = self._processed_data or self._raw_data
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self =      feature_1   feature_2  ...  feature_3_x_feature_5  feature_4_x_feature_5
+0   109.934283   71.692585  ...         ...     8059.801074
+99   95.308257   77.140594  ...            8145.397985            9025.372337
+
+[100 rows x 16 columns]
+
+    @final
+    def __nonzero__(self) -> NoReturn:
+>       raise ValueError(
+            f"The truth value of a {type(self).__name__} is ambiguous. "
+            "Use a.empty, a.bool(), a.item(), a.any() or a.all()."
+        )
+E       ValueError: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+
+C:\Users\range\AppData\Local\Programs\Python\Python313\Lib\site-packages\pandas\core\generic.py:1580: ValueError
+============================== warnings summary ===============================
+tests/test_pipeline.py::TestPipeline::test_model_training
+tests/test_pipeline.py::TestPipeline::test_model_training
+  D:\ML-Pipeline\src\pipeline_manager.py:239: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    start_time = datetime.utcnow()
+
+tests/test_pipeline.py::TestPipeline::test_model_training
+tests/test_pipeline.py::TestPipeline::test_model_training
+tests/test_pipeline.py::TestPipeline::test_model_training
+tests/test_pipeline.py::TestPipeline::test_model_training
+  D:\ML-Pipeline\src\database.py:386: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+
+tests/test_pipeline.py::TestPipeline::test_model_training
+tests/test_pipeline.py::TestPipeline::test_model_training
+tests/test_pipeline.py::TestPipeline::test_model_training
+tests/test_pipeline.py::TestPipeline::test_model_training
+  D:\ML-Pipeline\src\database.py:387: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    hash_part = hashlib.md5(str(datetime.utcnow().timestamp()).encode()).hexdigest()[:8]
+
+tests/test_pipeline.py::TestPipeline::test_model_training
+tests/test_pipeline.py::TestPipeline::test_model_training
+  D:\ML-Pipeline\src\ingestion.py:472: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    timestamp=datetime.utcnow().isoformat(),
+
+tests/test_pipeline.py: 12 warnings
+  D:\ML-Pipeline\src\database.py:313: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    datetime.utcnow().isoformat()
+
+tests/test_pipeline.py::TestPipeline::test_model_training
+tests/test_pipeline.py::TestPipeline::test_model_training
+  D:\ML-Pipeline\src\feature_eng.py:521: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    timestamp=datetime.utcnow().isoformat(),
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_pipeline.py::TestPipeline::test_model_training - ValueError: The truth value of a DataFrame is ambiguous. Use a.empty, a.bool(), a.item(), a.any() or a.all().
+======================= 1 failed, 26 warnings in 2.27s ========================

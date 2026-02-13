@@ -18,9 +18,9 @@ import io
 # Add parent directory to path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from pipeline_manager import MLPipeline, PipelineConfig
-from monitor import DriftMonitor
-from feature_eng import FeatureEngineer, get_available_transformations
+from src.pipeline_manager import MLPipeline, PipelineConfig
+from src.monitor import DriftMonitor
+from src.feature_eng import FeatureEngineer, get_available_transformations
 
 # ==================== Page Configuration ====================
 

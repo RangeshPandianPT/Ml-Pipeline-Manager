@@ -8,10 +8,10 @@ import logging
 import argparse
 from pathlib import Path
 
-from config import PipelineConfig, default_config
-from ingestion import create_sample_agriharv_data, create_sample_healthcare_data
-from pipeline_manager import MLPipeline
-from monitor import simulate_drift
+from src.config import PipelineConfig, default_config
+from src.ingestion import create_sample_agriharv_data, create_sample_healthcare_data
+from src.pipeline_manager import MLPipeline
+from src.monitor import simulate_drift
 
 # Configure logging
 logging.basicConfig(
@@ -36,12 +36,12 @@ def run_demo_pipeline(dataset: str = "generic", n_samples: int = 1000):
     # Load or create data
     if dataset == "generic":
         print(f"Generating generic sample dataset ({n_samples} samples)...")
-        from ingestion import create_sample_dataset
+        from src.ingestion import create_sample_dataset
         df = create_sample_dataset(n_samples=n_samples)
         target_column = "target"
     elif dataset == "healthcare":
         print(f"Generating healthcare sample dataset ({n_samples} samples)...")
-        from ingestion import create_sample_healthcare_data
+        from src.ingestion import create_sample_healthcare_data
         df = create_sample_healthcare_data(n_samples=n_samples)
         target_column = "cvd_risk_score"
     else:
@@ -96,11 +96,11 @@ def demo_drift_detection(pipeline: MLPipeline, dataset: str = "generic"):
     
     # Create new data with drift
     if dataset == "generic":
-        from ingestion import create_sample_dataset
+        from src.ingestion import create_sample_dataset
         new_data = create_sample_dataset(n_samples=500)
         drift_columns = [c for c in new_data.columns if c.startswith('feature')][:3]
     else:
-        from ingestion import create_sample_healthcare_data
+        from src.ingestion import create_sample_healthcare_data
         new_data = create_sample_healthcare_data(n_samples=500)
         drift_columns = ['age', 'bmi', 'blood_pressure_systolic']
     
@@ -133,7 +133,7 @@ def demo_feature_engineering():
     """
     Demonstrate feature engineering capabilities.
     """
-    from feature_eng import FeatureEngineer
+    from src.feature_eng import FeatureEngineer
     
     print("\n" + "=" * 60)
     print("Feature Engineering Demo")
@@ -146,7 +146,7 @@ def demo_feature_engineering():
         print(f"  - {t}")
     
     # Create sample data
-    from ingestion import create_sample_dataset
+    from src.ingestion import create_sample_dataset
     df = create_sample_dataset(n_samples=100, n_features=10)
     print(f"\nOriginal shape: {df.shape}")
     
@@ -173,8 +173,8 @@ def demo_monitoring_only(data_path: str = None):
     """
     Run monitoring on new data without retraining.
     """
-    from monitor import DriftMonitor
-    from ingestion import DataIngestion, create_sample_dataset
+    from src.monitor import DriftMonitor
+    from src.ingestion import DataIngestion, create_sample_dataset
     
     print("\n" + "=" * 60)
     print("Monitoring Only Mode")

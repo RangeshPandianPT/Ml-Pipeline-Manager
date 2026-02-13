@@ -20,8 +20,8 @@ import sys
 # Add parent directory to path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from pipeline_manager import MLPipeline, PipelineConfig, TaskType
-from monitor import DriftReport
+from src.pipeline_manager import MLPipeline, PipelineConfig, TaskType
+from src.monitor import DriftReport
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

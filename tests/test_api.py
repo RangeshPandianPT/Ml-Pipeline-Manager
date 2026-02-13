@@ -13,7 +13,7 @@ import io
 sys.path.append(str(Path(__file__).parent.parent))
 
 from api.main import app
-from ingestion import create_sample_dataset
+from src.ingestion import create_sample_dataset
 
 
 client = TestClient(app)
