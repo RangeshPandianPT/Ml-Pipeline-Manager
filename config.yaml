@@ -1,0 +1,64 @@
+# ML Pipeline Configuration
+# Domain-agnostic configuration - customize for your dataset
+# Copy this file and modify as needed
+
+# Pipeline settings
+batch_size: 1000
+validation_split: 0.2
+random_state: 42
+model_type: "random_forest"  # Options: random_forest, gradient_boosting, linear, logistic_regression
+
+# Logging
+log_level: "INFO"
+
+# Database configuration
+database:
+  db_type: "sqlite"  # "sqlite" or "postgresql"
+  db_name: "pipeline_metadata.db"
+  # PostgreSQL settings (uncomment if using PostgreSQL)
+  # db_host: "localhost"
+  # db_port: 5432
+  # db_user: "postgres"
+  # db_password: ""
+
+# Feature engineering configuration
+features:
+  target_column: "target"  # Change this to your target column name
+  drop_columns: []
+  date_columns: []  # List datetime columns here, e.g., ["timestamp", "date"]
+  
+  # Numerical transformations to apply
+  # Format: {"column_name": ["transform1", "transform2"]} or {"default": [...]} for all
+  numerical_transformations:
+    default:
+      - "impute_median"
+      - "standardize"
+    # Uncomment and customize for specific columns:
+    # feature_1:
+    #   - "log_transform"
+    # feature_2:
+    #   - "sqrt_transform"
+  
+  # Categorical transformations
+  categorical_transformations:
+    default:
+      - "one_hot_encode"
+
+# Data drift monitoring configuration
+monitor:
+  # Significance level for K-S test (alpha)
+  # Lower values = stricter threshold for detecting drift
+  ks_significance_level: 0.05
+  
+  # Minimum samples required for drift detection
+  min_samples: 30
+  
+  # Specific columns to monitor (empty = all numerical columns)
+  monitor_columns: []
+  
+  # Percentage of columns with drift to trigger overall drift alert
+  # 0.3 = 30% of columns must show drift
+  drift_threshold: 0.3
+  
+  # Automatically trigger retraining when drift is detected
+  auto_retrain: true

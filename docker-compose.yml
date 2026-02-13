@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  # FastAPI Backend
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: ml-pipeline-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./models:/app/models
+      - ./mlruns:/app/mlruns
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./pipeline_metadata.db:/app/pipeline_metadata.db
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOG_LEVEL=INFO
+    networks:
+      - ml-pipeline-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Streamlit Dashboard
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard
+    container_name: ml-pipeline-dashboard
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./models:/app/models
+      - ./mlruns:/app/mlruns
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./pipeline_metadata.db:/app/pipeline_metadata.db
+    environment:
+      - PYTHONUNBUFFERED=1
+      - API_URL=http://api:8000
+    networks:
+      - ml-pipeline-network
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  # MLflow Tracking Server
+  mlflow:
+    image: python:3.9-slim
+    container_name: ml-pipeline-mlflow
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./mlruns:/mlruns
+    command: >
+      sh -c "pip install mlflow &&
+             mlflow server 
+             --backend-store-uri sqlite:///mlruns/mlflow.db
+             --default-artifact-root /mlruns
+             --host 0.0.0.0
+             --port 5000"
+    networks:
+      - ml-pipeline-network
+    restart: unless-stopped
+
+networks:
+  ml-pipeline-network:
+    driver: bridge
+
+volumes:
+  models:
+  mlruns:
+  logs:
+  data:
