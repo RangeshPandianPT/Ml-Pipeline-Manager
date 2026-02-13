@@ -279,7 +279,7 @@ class MLPipeline:
                           df: pd.DataFrame = None,
                           auto: bool = True,
                           transformations: List[str] = None,
-                          target_column: str = None) -> pd.DataFrame:
+                          target_column: str = None) -> dict:
         """
         Perform feature engineering.
         
@@ -290,7 +290,11 @@ class MLPipeline:
             target_column: Target column to exclude from transformations
         
         Returns:
-            Transformed DataFrame
+            Dictionary containing:
+                - transformed_data: Transformed DataFrame
+                - features_created: Number of new features created
+                - original_features: Original feature count
+                - new_features: New feature count
         """
         self._state = PipelineState.FEATURE_ENGINEERING
         
@@ -327,7 +331,13 @@ class MLPipeline:
             
             logger.info(f"Feature engineering complete: {original_features} -> {new_features} features")
             
-            return result_df
+            # Return dict for compatibility with Streamlit app and other consumers
+            return {
+                'transformed_data': result_df,
+                'features_created': self._metrics.features_created,
+                'original_features': original_features,
+                'new_features': new_features
+            }
             
         except Exception as e:
             self._state = PipelineState.FAILED
