@@ -196,6 +196,8 @@ if 'drift_report' not in st.session_state:
     st.session_state.drift_report = None
 if 'training_results' not in st.session_state:
     st.session_state.training_results = None
+if 'target_column' not in st.session_state:
+    st.session_state.target_column = None
 
 # ==================== Helper Functions ====================
 
@@ -498,8 +500,11 @@ with tab2:
         target_column = st.selectbox(
             "Target Column",
             options=st.session_state.data.columns.tolist(),
+            index=st.session_state.data.columns.tolist().index(st.session_state.target_column)
+                  if st.session_state.target_column in st.session_state.data.columns.tolist() else 0,
             help="Select the column you want to predict"
         )
+        st.session_state.target_column = target_column
         
         st.markdown("---")
         
@@ -557,40 +562,68 @@ with tab3:
     if st.session_state.data is None:
         st.warning("⚠️ Please upload data first in the 'Data Upload' tab")
     else:
+        # Target column selector (works independently of Feature Engineering tab)
+        all_cols = st.session_state.data.columns.tolist()
+        default_idx = all_cols.index(st.session_state.target_column) \
+            if st.session_state.target_column in all_cols else (len(all_cols) - 1)
+        train_target = st.selectbox(
+            "🎯 Target Column",
+            options=all_cols,
+            index=default_idx,
+            key="train_target_col",
+            help="Select the column you want to predict"
+        )
+        st.session_state.target_column = train_target
+
         col1, col2 = st.columns([3, 1])
         
         with col1:
-            st.subheader("🎯 Training Configuration")
-            st.info(f"**Model:** {model_type} | **Validation Split:** {validation_split:.0%}")
+            st.subheader("⚙️ Training Configuration")
+            st.info(f"**Model:** {model_type} | **Validation Split:** {validation_split:.0%} | **Target:** `{train_target}`")
         
         with col2:
             if st.button("🚀 Train Model", use_container_width=True):
                 with st.spinner("🔄 Training model..."):
                     try:
-                        # Update config
-                        st.session_state.pipeline.config.model_type = model_type
-                        st.session_state.pipeline.config.validation_split = validation_split
-                        
-                        # Get target column
-                        if 'target_column' not in st.session_state:
-                            st.error("❌ Please run feature engineering first to select target column")
-                        else:
-                            # Run full pipeline
-                            results = st.session_state.pipeline.run_full_pipeline(
-                                source=st.session_state.data,
-                                target_column=target_column,
-                                auto_features=auto_features,
-                                check_drift=False,
-                                train_model=True
-                            )
-                            
-                            st.session_state.training_results = results
-                            st.session_state.model_trained = True
-                            
-                            st.success("✅ Model training completed successfully!")
+                        pipeline = st.session_state.pipeline
+
+                        # Update config settings from sidebar
+                        pipeline.config.model_type = model_type
+                        pipeline.config.validation_split = validation_split
+
+                        # Step 1: Ingest raw data into pipeline
+                        pipeline.ingest(st.session_state.data)
+
+                        # Step 2: Feature engineering (use processed data if available, else raw)
+                        training_df = st.session_state.processed_data \
+                            if st.session_state.processed_data is not None \
+                            else st.session_state.data
+
+                        # Step 3: Prepare train/test split
+                        pipeline.prepare_training_data(
+                            df=training_df,
+                            target_column=train_target,
+                            test_size=validation_split
+                        )
+
+                        # Step 4: Train
+                        pipeline.train_model(model_type=model_type)
+
+                        # Step 5: Evaluate
+                        metrics = pipeline.evaluate_model()
+
+                        # Step 6: Save model
+                        pipeline.save_model()
+
+                        st.session_state.training_results = {"model_metrics": metrics}
+                        st.session_state.model_trained = True
+
+                        st.success("✅ Model training completed successfully!")
                     
                     except Exception as e:
+                        import traceback
                         st.error(f"❌ Training failed: {str(e)}")
+                        st.code(traceback.format_exc(), language="python")
         
         # Show training results
         if st.session_state.training_results is not None:
@@ -618,9 +651,12 @@ with tab3:
                     st.subheader("🎯 Feature Importance")
                     
                     importances = st.session_state.pipeline.model.feature_importances_
-                    feature_names = st.session_state.processed_data.drop(columns=[target_column]).columns.tolist()
+                    feat_df = st.session_state.processed_data \
+                        if st.session_state.processed_data is not None \
+                        else st.session_state.data
+                    feature_names = [c for c in feat_df.columns if c != train_target]
                     
-                    fig = plot_feature_importance(feature_names, importances)
+                    fig = plot_feature_importance(np.array(feature_names), importances)
                     st.plotly_chart(fig, use_container_width=True)
 
 # ==================== Tab 4: Drift Monitoring ====================
@@ -734,10 +770,15 @@ with tab5:
         
         col1, col2, col3, col4 = st.columns(4)
         
+        display_df = st.session_state.processed_data \
+            if st.session_state.processed_data is not None \
+            else st.session_state.data
+
         with col1:
             create_metric_card("Dataset Size", f"{st.session_state.data.shape[0]:,}")
         with col2:
-            create_metric_card("Features", f"{st.session_state.processed_data.shape[1] - 1}")
+            feature_count = display_df.shape[1] - 1 if display_df is not None else "N/A"
+            create_metric_card("Features", str(feature_count))
         with col3:
             create_metric_card("Model Type", model_type.replace('_', ' ').title())
         with col4:
@@ -754,7 +795,10 @@ with tab5:
         
         with col1:
             if st.button("📥 Download Processed Data", use_container_width=True):
-                csv = st.session_state.processed_data.to_csv(index=False)
+                export_df = st.session_state.processed_data \
+                    if st.session_state.processed_data is not None \
+                    else st.session_state.data
+                csv = export_df.to_csv(index=False)
                 st.download_button(
                     label="💾 Download CSV",
                     data=csv,

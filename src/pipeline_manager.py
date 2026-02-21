@@ -659,7 +659,8 @@ class MLPipeline:
             # Step 2: Feature Engineering
             logger.info("=" * 50)
             logger.info("STEP 2: Feature Engineering")
-            df = self.engineer_features(df, auto=auto_features, target_column=target_column)
+            feat_result = self.engineer_features(df, auto=auto_features, target_column=target_column)
+            df = feat_result['transformed_data']
             results["steps_completed"].append("feature_engineering")
             
             # Step 3: Drift Monitoring
