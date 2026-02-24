@@ -3,7 +3,7 @@ FastAPI REST API for ML Pipeline
 Production-ready API for model training, prediction, and monitoring
 """
 
-from fastapi import FastAPI, HTTPException, UploadFile, File, BackgroundTasks, Depends
+from fastapi import FastAPI, HTTPException, UploadFile, File, BackgroundTasks, Depends, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from pydantic import BaseModel, Field, validator
@@ -164,10 +164,25 @@ async def health_check():
         timestamp=datetime.now().isoformat()
     )
 
+def train_request_form(
+    target_column: str = Form(..., description="Name of the target column"),
+    model_type: str = Form("random_forest", description="Type of model to train"),
+    auto_features: bool = Form(True, description="Enable automatic feature engineering"),
+    check_drift: bool = Form(False, description="Check for drift before training"),
+    validation_split: float = Form(0.2, ge=0.0, le=0.5, description="Validation split ratio")
+) -> TrainRequest:
+    return TrainRequest(
+        target_column=target_column,
+        model_type=model_type,
+        auto_features=auto_features,
+        check_drift=check_drift,
+        validation_split=validation_split
+    )
+
 @app.post("/train", response_model=TrainResponse)
 async def train_model(
     background_tasks: BackgroundTasks,
-    request: TrainRequest,
+    request: TrainRequest = Depends(train_request_form),
     file: UploadFile = File(...)
 ):
     """
@@ -416,7 +431,7 @@ async def get_pipeline_state():
             "config": {
                 "model_type": pipeline.config.model_type,
                 "validation_split": pipeline.config.validation_split,
-                "drift_threshold": pipeline.config.drift_threshold
+                "drift_threshold": pipeline.config.monitor.drift_threshold
             }
         }
     

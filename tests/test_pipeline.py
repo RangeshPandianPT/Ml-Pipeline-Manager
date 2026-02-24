@@ -131,8 +131,8 @@ class TestPipeline:
         )
         
         assert 'model_metrics' in results
-        assert results['model_trained'] is True
-        assert 'execution_time_seconds' in results
+        assert results['metrics']['model_trained'] is True
+        assert 'execution_time_seconds' in results['metrics']
     
     def test_model_training(self, pipeline, sample_data):
         """Test model training"""
