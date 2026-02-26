@@ -1,11 +1,21 @@
 # Project Refactoring and GPU Support Walkthrough
 
 ## Overview
-This walkthrough covers the recent updates to refactor the project structure, fix CI/CD failures, and enable GPU support for model training.
+This walkthrough covers the recent updates to secure the FastAPI application by adding JSON Web Token (JWT) authentication and Rate Limiting, as well as previous refactoring and GPU support updates.
 
 ## Changes
 
-### 1. Project Structure Refactoring
+### 1. API Security (Authentication & Rate Limiting)
+- **JWT Authentication**: 
+  - Created `api/security.py` to handle password hashing (`passlib[bcrypt]`) and JWT token generation/validation (`python-jose[cryptography]`).
+  - Added a `POST /token` endpoint in `api/main.py` for clients to obtain an access token using OAuth2 password flow.
+  - Secured endpoints (`/train`, `/predict`, `/drift/check`, `/models`, `/pipeline/state`) using FastAPI's `Depends(get_current_active_user)`.
+- **Rate Limiting**:
+  - Integrated `slowapi` to protect against brute-force and DDoS attacks.
+  - Applied varied rate limits: `"20/minute"` for health/info endpoints, `"10/minute"` for login/predict, and `"5/minute"` for heavy operations like training and drift checking.
+- **Testing**: Updated `tests/test_api.py` to obtain and pass authentication headers, and added tests for unauthorized access verification.
+
+### 2. Project Structure Refactoring
 - **Source Code**: Moved all core logic to `src/`.
 - **Scripts**: Moved executables to `scripts/`.
 - **Documentation**: Consolidated in `docs/`.
@@ -47,4 +57,4 @@ Ensure you have:
 
 ## Verification Results
 - **Pipeline Tests**: All 15 tests passed, confirming data ingestion, feature engineering, model training, and drift monitoring.
-- **API Tests**: All 5 tests passed, confirming endpoint health, model management, and state retrieval.
+- **API Tests**: Tests fully updated to incorporate OAuth2 Bearer token authentication headers. All 6 tests (including `test_unauthorized_access`) passed, confirming endpoint security, model management, and state retrieval.
