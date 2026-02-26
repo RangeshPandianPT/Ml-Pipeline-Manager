@@ -3,11 +3,16 @@ FastAPI REST API for ML Pipeline
 Production-ready API for model training, prediction, and monitoring
 """
 
-from fastapi import FastAPI, HTTPException, UploadFile, File, BackgroundTasks, Depends, Form
+from fastapi import FastAPI, HTTPException, UploadFile, File, BackgroundTasks, Depends, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 from pydantic import BaseModel, Field, validator
 from typing import Optional, List, Dict, Any, Union
+from fastapi.security import OAuth2PasswordRequestForm
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 import pandas as pd
 import numpy as np
 import io
@@ -23,6 +28,18 @@ sys.path.append(str(Path(__file__).parent.parent))
 from src.pipeline_manager import MLPipeline, PipelineConfig, TaskType
 from src.monitor import DriftReport
 
+from api.security import (
+    Token,
+    create_access_token,
+    get_current_active_user,
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    FAKE_USERS_DB,
+    verify_password,
+    get_user,
+    get_current_user
+)
+from datetime import timedelta
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -35,6 +52,12 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+# Setup SlowAPI Limiter
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 # CORS middleware
 app.add_middleware(
@@ -144,7 +167,8 @@ def get_available_models() -> List[str]:
 # ==================== API Endpoints ====================
 
 @app.get("/", response_model=Dict[str, str])
-async def root():
+@limiter.limit("20/minute")
+async def root(request: Request):
     """Root endpoint"""
     return {
         "message": "ML Pipeline API",
@@ -154,7 +178,8 @@ async def root():
     }
 
 @app.get("/health", response_model=HealthResponse)
-async def health_check():
+@limiter.limit("20/minute")
+async def health_check(request: Request):
     """Health check endpoint"""
     return HealthResponse(
         status="healthy",
@@ -163,6 +188,22 @@ async def health_check():
         models_available=get_available_models(),
         timestamp=datetime.now().isoformat()
     )
+
+@app.post("/token", response_model=Token)
+@limiter.limit("10/minute")
+async def login_for_access_token(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
+    user = get_user(FAKE_USERS_DB, form_data.username)
+    if not user or not verify_password(form_data.password, user["hashed_password"]):
+        raise HTTPException(
+            status_code=401,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user["username"]}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
 
 def train_request_form(
     target_column: str = Form(..., description="Name of the target column"),
@@ -180,10 +221,13 @@ def train_request_form(
     )
 
 @app.post("/train", response_model=TrainResponse)
+@limiter.limit("5/minute")
 async def train_model(
+    request_obj: Request,
     background_tasks: BackgroundTasks,
     request: TrainRequest = Depends(train_request_form),
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_active_user)
 ):
     """
     Train a new model on uploaded data
@@ -247,7 +291,12 @@ async def train_model(
         raise HTTPException(status_code=500, detail=f"Training failed: {str(e)}")
 
 @app.post("/predict", response_model=PredictResponse)
-async def predict(request: PredictRequest):
+@limiter.limit("10/minute")
+async def predict(
+    request_obj: Request, 
+    request: PredictRequest,
+    current_user: dict = Depends(get_current_active_user)
+):
     """
     Make predictions using trained model
     
@@ -304,9 +353,12 @@ async def predict(request: PredictRequest):
         raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
 
 @app.post("/drift/check", response_model=DriftResponse)
+@limiter.limit("5/minute")
 async def check_drift(
+    request_obj: Request,
     request: DriftCheckRequest,
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_active_user)
 ):
     """
     Check for data drift in uploaded data
@@ -364,7 +416,11 @@ async def check_drift(
         raise HTTPException(status_code=500, detail=f"Drift check failed: {str(e)}")
 
 @app.get("/models", response_model=Dict[str, Any])
-async def list_models():
+@limiter.limit("20/minute")
+async def list_models(
+    request_obj: Request,
+    current_user: dict = Depends(get_current_active_user)
+):
     """List all available trained models"""
     try:
         models = get_available_models()
@@ -393,7 +449,12 @@ async def list_models():
         raise HTTPException(status_code=500, detail=f"Failed to list models: {str(e)}")
 
 @app.delete("/models/{model_name}")
-async def delete_model(model_name: str):
+@limiter.limit("5/minute")
+async def delete_model(
+    request_obj: Request,
+    model_name: str,
+    current_user: dict = Depends(get_current_active_user)
+):
     """Delete a specific model"""
     try:
         model_path = Path("models") / f"{model_name}.joblib"
@@ -419,7 +480,11 @@ async def delete_model(model_name: str):
         raise HTTPException(status_code=500, detail=f"Failed to delete model: {str(e)}")
 
 @app.get("/pipeline/state")
-async def get_pipeline_state():
+@limiter.limit("20/minute")
+async def get_pipeline_state(
+    request_obj: Request,
+    current_user: dict = Depends(get_current_active_user)
+):
     """Get current pipeline state and statistics"""
     try:
         return {

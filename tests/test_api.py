@@ -18,6 +18,11 @@ from src.ingestion import create_sample_dataset
 
 client = TestClient(app)
 
+def get_auth_headers():
+    response = client.post("/token", data={"username": "admin", "password": "secret123"})
+    token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
 
 class TestAPIEndpoints:
     """Test FastAPI endpoints"""
@@ -36,9 +41,15 @@ class TestAPIEndpoints:
         assert data["status"] == "healthy"
         assert "version" in data
     
+    def test_unauthorized_access(self):
+        """Test accessing protected route without token"""
+        response = client.get("/pipeline/state")
+        assert response.status_code == 401
+        
     def test_list_models(self):
         """Test list models endpoint"""
-        response = client.get("/models")
+        headers = get_auth_headers()
+        response = client.get("/models", headers=headers)
         assert response.status_code == 200
         data = response.json()
         assert "success" in data
@@ -46,7 +57,8 @@ class TestAPIEndpoints:
     
     def test_pipeline_state(self):
         """Test pipeline state endpoint"""
-        response = client.get("/pipeline/state")
+        headers = get_auth_headers()
+        response = client.get("/pipeline/state", headers=headers)
         assert response.status_code == 200
         data = response.json()
         assert "success" in data
@@ -77,7 +89,8 @@ class TestAPIEndpoints:
         }
         
         # Make request
-        response = client.post("/train", data=data, files=files)
+        headers = get_auth_headers()
+        response = client.post("/train", data=data, files=files, headers=headers)
         
         assert response.status_code == 200
         result = response.json()
