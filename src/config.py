@@ -75,7 +75,7 @@ class PipelineConfig:
     random_state: int = 42
     
     # Model settings
-    model_type: str = "xgboost"  # "random_forest", "gradient_boosting", "logistic_regression", "xgboost"
+    model_type: str = "xgboost"  # "random_forest", "gradient_boosting", "logistic_regression", "xgboost", "pytorch_nn"
     
     # Logging
     log_level: str = "INFO"

@@ -29,6 +29,7 @@ from .database import MetadataDatabase, ModelLog, generate_id
 from .ingestion import DataIngestion
 from .feature_eng import FeatureEngineer, AutoFeatureFactory
 from .monitor import DriftMonitor, DriftReport, detect_drift, simulate_drift, DriftResult
+from .pytorch_model import PyTorchMLPWrapper
 
 logger = logging.getLogger(__name__)
 
@@ -92,11 +93,13 @@ class ModelFactory:
                 "gradient_boosting": GradientBoostingRegressor,
                 "linear": LinearRegression,
                 "xgboost": xgb.XGBRegressor,
+                "pytorch_nn": PyTorchMLPWrapper,
             },
             TaskType.CLASSIFICATION: {
                 "random_forest": RandomForestClassifier,
                 "logistic_regression": LogisticRegression,
                 "xgboost": xgb.XGBClassifier,
+                "pytorch_nn": PyTorchMLPWrapper,
             }
         }
         
@@ -111,6 +114,7 @@ class ModelFactory:
             "linear": {},
             "logistic_regression": {"random_state": 42, "max_iter": 1000},
             "xgboost": {"n_estimators": 100, "random_state": 42, "tree_method": "hist", "device": "cuda"},
+            "pytorch_nn": {"hidden_sizes": [64, 32], "lr": 0.001, "epochs": 50, "random_state": 42},
         }
         
         params = {**default_params.get(model_type, {}), **kwargs}
@@ -120,6 +124,9 @@ class ModelFactory:
             params.pop("random_state", None)
             params.pop("n_estimators", None)
             params.pop("n_jobs", None)
+            
+        if model_type == "pytorch_nn":
+            params["task_type"] = task_type.value
         
         return model_class(**params)
 
