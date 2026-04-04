@@ -35,7 +35,7 @@ jobs:
         pip install -r requirements.txt
         pip install -r requirements_api.txt
         pip install -r requirements_dashboard.txt
-        pip install pytest pytest-cov pytest-asyncio httpx
+        pip install pytest pytest-cov pytest-asyncio "httpx<0.28.0"
     
     - name: Lint with flake8
       run: |
