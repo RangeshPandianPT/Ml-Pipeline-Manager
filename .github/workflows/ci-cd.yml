@@ -76,10 +76,10 @@ jobs:
     
     - name: Test Docker Compose
       run: |
-        docker-compose up -d
+        docker compose up -d
         sleep 30
-        docker-compose ps
-        docker-compose down
+        docker compose ps
+        docker compose down
 
   deploy:
     runs-on: ubuntu-latest
