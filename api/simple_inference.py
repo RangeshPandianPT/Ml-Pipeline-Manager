@@ -72,7 +72,6 @@ def health_check():
 
 @app.post("/predict")
 def predict(request: PredictRequest):
-    global model
     if not model:
         # Try loading again in case a new model was trained
         load_latest_model()
