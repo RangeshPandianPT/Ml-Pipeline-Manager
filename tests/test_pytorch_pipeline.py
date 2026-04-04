@@ -20,7 +20,7 @@ from src.ingestion import create_sample_dataset
 def sample_regression_data():
     """Create sample dataset for regression"""
     df = create_sample_dataset(n_samples=100, n_features=4)
-    df['target'] = df['feature_1'] * 2.5 + df['feature_2'] * -1.5 + np.random.randn(100)
+    df['target'] = df['feature_1'].fillna(0) * 2.5 + df['feature_2'].fillna(0) * -1.5 + np.random.randn(100)
     return df
 
 
@@ -29,7 +29,7 @@ def sample_classification_data():
     """Create sample dataset for classification"""
     df = create_sample_dataset(n_samples=100, n_features=4)
     # create a simple binary target
-    df['target'] = (df['feature_1'] + df['feature_2'] > 0).astype(int)
+    df['target'] = (df['feature_1'].fillna(0) + df['feature_2'].fillna(0) > 0).astype(int)
     return df
 
 
