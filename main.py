@@ -7,6 +7,7 @@ Domain-agnostic - works with any dataset.
 import logging
 import argparse
 from pathlib import Path
+import pandas as pd
 
 from src.config import PipelineConfig, default_config
 from src.ingestion import create_sample_agriharv_data, create_sample_healthcare_data
