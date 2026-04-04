@@ -1,0 +1,152 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 20% 97%;
+    --foreground: 230 25% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 230 25% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 230 25% 10%;
+    --primary: 217 91% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 15% 92%;
+    --secondary-foreground: 230 25% 15%;
+    --muted: 220 15% 92%;
+    --muted-foreground: 215 15% 45%;
+    --accent: 270 70% 55%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 15% 88%;
+    --input: 220 15% 88%;
+    --ring: 217 91% 50%;
+    --radius: 0.75rem;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 230 15% 35%;
+    --sidebar-primary: 217 91% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 15% 95%;
+    --sidebar-accent-foreground: 230 25% 10%;
+    --sidebar-border: 220 15% 90%;
+    --sidebar-ring: 217 91% 50%;
+
+    --neon-blue: 217 91% 50%;
+    --neon-purple: 270 70% 55%;
+    --neon-cyan: 185 80% 40%;
+    --neon-green: 145 70% 38%;
+    --neon-orange: 30 90% 50%;
+    --neon-red: 0 84% 55%;
+
+    --glass-bg: 220 15% 96%;
+    --glass-border: 220 15% 85%;
+  }
+
+  .dark {
+    --background: 228 24% 6%;
+    --foreground: 210 40% 95%;
+    --card: 228 22% 9%;
+    --card-foreground: 210 40% 95%;
+    --popover: 228 22% 9%;
+    --popover-foreground: 210 40% 95%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 228 18% 14%;
+    --secondary-foreground: 210 40% 90%;
+    --muted: 228 18% 14%;
+    --muted-foreground: 215 20% 55%;
+    --accent: 270 80% 60%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 228 18% 16%;
+    --input: 228 18% 16%;
+    --ring: 217 91% 60%;
+    --sidebar-background: 228 24% 7%;
+    --sidebar-foreground: 210 30% 75%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 228 20% 12%;
+    --sidebar-accent-foreground: 210 40% 95%;
+    --sidebar-border: 228 18% 14%;
+    --sidebar-ring: 217 91% 60%;
+
+    --neon-blue: 217 91% 60%;
+    --neon-purple: 270 80% 60%;
+    --neon-cyan: 185 90% 55%;
+    --neon-green: 145 80% 50%;
+    --neon-orange: 30 95% 60%;
+    --neon-red: 0 84% 60%;
+
+    --glass-bg: 228 22% 11%;
+    --glass-border: 228 18% 20%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-card/90 backdrop-blur-xl border border-[hsl(var(--glass-border))] rounded-xl shadow-sm;
+  }
+  .dark .glass-card {
+    @apply bg-card/60;
+    box-shadow: 0 0 40px -12px hsl(var(--primary) / 0.08), inset 0 1px 0 0 hsl(0 0% 100% / 0.04);
+  }
+  .glass-sidebar {
+    @apply bg-[hsl(var(--sidebar-background))] border-r border-[hsl(var(--sidebar-border))] shadow-sm;
+  }
+  .dark .glass-sidebar {
+    @apply bg-[hsl(var(--sidebar-background))]/85 backdrop-blur-2xl;
+  }
+  .neon-glow {
+    box-shadow: 0 0 20px -5px hsl(var(--primary) / 0.25), 0 0 40px -10px hsl(var(--primary) / 0.12);
+  }
+  .neon-button {
+    @apply relative overflow-hidden transition-all duration-300 text-primary-foreground font-semibold;
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--neon-purple)));
+    box-shadow: 0 4px 20px -4px hsl(var(--primary) / 0.4);
+  }
+  .neon-button:hover {
+    box-shadow: 0 6px 30px -3px hsl(var(--primary) / 0.55), 0 0 50px -10px hsl(var(--neon-purple) / 0.25);
+    transform: translateY(-1px);
+  }
+  .neon-button:active {
+    transform: translateY(0);
+  }
+  .gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--neon-purple)));
+  }
+  .metric-card-hover {
+    @apply transition-all duration-300;
+  }
+  .metric-card-hover:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px -12px hsl(var(--primary) / 0.18);
+  }
+  .page-header {
+    @apply mb-1;
+  }
+  .page-header h1 {
+    @apply text-2xl font-extrabold tracking-tight;
+  }
+  .page-header p {
+    @apply text-muted-foreground mt-1 text-sm;
+  }
+  .section-title {
+    @apply text-base font-semibold tracking-tight;
+  }
+}
