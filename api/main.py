@@ -132,6 +132,38 @@ class HealthResponse(BaseModel):
     models_available: List[str]
     timestamp: str
 
+class UploadResponse(BaseModel):
+    success: bool
+    message: str
+    num_rows: int
+    num_columns: int
+    columns: List[str]
+    preview: List[Dict[str, Any]]
+
+class FeatureEngineerRequest(BaseModel):
+    target_column: str
+    auto_features: bool = True
+    transformations: Optional[List[str]] = None
+
+class FeatureEngineerResponse(BaseModel):
+    success: bool
+    features_created: int
+    original_features: int
+    new_features: int
+    preview: List[Dict[str, Any]]
+
+class TrainStepRequest(BaseModel):
+    target_column: str
+    model_type: str = "random_forest"
+    validation_split: float = 0.2
+
+class PreviewResponse(BaseModel):
+    success: bool
+    num_rows: int
+    num_columns: int
+    columns: List[str]
+    preview: List[Dict[str, Any]]
+
 # ==================== Helper Functions ====================
 
 def parse_uploaded_file(file: UploadFile) -> pd.DataFrame:
@@ -223,9 +255,9 @@ def train_request_form(
 @app.post("/train", response_model=TrainResponse)
 @limiter.limit("5/minute")
 async def train_model(
-    request_obj: Request,
+    request: Request,
     background_tasks: BackgroundTasks,
-    request: TrainRequest = Depends(train_request_form),
+    body: TrainRequest = Depends(train_request_form),
     file: UploadFile = File(...),
     current_user: dict = Depends(get_current_active_user)
 ):
@@ -245,23 +277,23 @@ async def train_model(
         df = parse_uploaded_file(file)
         
         # Validate target column
-        if request.target_column not in df.columns:
+        if body.target_column not in df.columns:
             raise HTTPException(
                 status_code=400,
-                detail=f"Target column '{request.target_column}' not found in data"
+                detail=f"Target column '{body.target_column}' not found in data"
             )
         
         # Update pipeline config
-        pipeline.config.model_type = request.model_type
-        pipeline.config.validation_split = request.validation_split
+        pipeline.config.model_type = body.model_type
+        pipeline.config.validation_split = body.validation_split
         
         # Run full pipeline
-        logger.info(f"Starting training pipeline with {request.model_type}")
+        logger.info(f"Starting training pipeline with {body.model_type}")
         results = pipeline.run_full_pipeline(
             source=df,
-            target_column=request.target_column,
-            auto_features=request.auto_features,
-            check_drift=request.check_drift,
+            target_column=body.target_column,
+            auto_features=body.auto_features,
+            check_drift=body.check_drift,
             train_model=True
         )
         
@@ -269,7 +301,7 @@ async def train_model(
         execution_time = (datetime.now() - start_time).total_seconds()
         
         # Generate model name
-        model_name = f"{request.model_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        model_name = f"{body.model_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         
         # Save model
         pipeline.save_model(model_name=model_name)
@@ -293,8 +325,8 @@ async def train_model(
 @app.post("/predict", response_model=PredictResponse)
 @limiter.limit("10/minute")
 async def predict(
-    request_obj: Request, 
-    request: PredictRequest,
+    request: Request, 
+    body: PredictRequest,
     current_user: dict = Depends(get_current_active_user)
 ):
     """
@@ -305,18 +337,18 @@ async def predict(
     """
     try:
         # Convert request data to DataFrame
-        df = pd.DataFrame(request.data)
+        df = pd.DataFrame(body.data)
         
         # Load model if specified
-        if request.model_name:
-            model_path = Path("models") / f"{request.model_name}.joblib"
+        if body.model_name:
+            model_path = Path("models") / f"{body.model_name}.joblib"
             if not model_path.exists():
                 raise HTTPException(
                     status_code=404,
-                    detail=f"Model '{request.model_name}' not found"
+                    detail=f"Model '{body.model_name}' not found"
                 )
             pipeline.load_model(str(model_path))
-            model_used = request.model_name
+            model_used = body.model_name
         else:
             if pipeline.model is None:
                 raise HTTPException(
@@ -355,27 +387,26 @@ async def predict(
 @app.post("/drift/check", response_model=DriftResponse)
 @limiter.limit("5/minute")
 async def check_drift(
-    request_obj: Request,
-    request: DriftCheckRequest,
+    request: Request,
     file: UploadFile = File(...),
-    current_user: dict = Depends(get_current_active_user)
+    set_as_reference: bool = False,
 ):
     """
     Check for data drift in uploaded data
-    
+
     - **file**: CSV, JSON, or Excel file with new data
-    - **set_as_reference**: Set this data as new reference baseline
+    - **set_as_reference**: Set this data as new reference baseline (query param)
     """
     try:
         # Parse uploaded file
         df = parse_uploaded_file(file)
-        
+
         # Check drift
         drift_report = pipeline.monitor_drift(
             current_data=df,
-            set_as_reference=request.set_as_reference
+            set_as_reference=set_as_reference
         )
-        
+
         if drift_report is None:
             raise HTTPException(
                 status_code=400,
@@ -387,15 +418,15 @@ async def check_drift(
         should_retrain = pipeline.drift_monitor.should_retrain()
         
         drifted_columns = [
-            col for col, result in drift_report.column_results.items()
+            col for col, result in drift_report.test_results.items()
             if result.drift_detected
         ]
         
         drift_summary = {
-            "total_columns_checked": len(drift_report.column_results),
+            "total_columns_checked": len(drift_report.test_results),
             "num_drifted_columns": len(drifted_columns),
-            "drift_percentage": len(drifted_columns) / len(drift_report.column_results) * 100,
-            "recommendation": drift_report.recommendation
+            "drift_percentage": len(drifted_columns) / len(drift_report.test_results) * 100 if len(drift_report.test_results) > 0 else 0,
+            "recommendation": drift_report.recommendations
         }
         
         logger.info(f"Drift check completed: {drift_detected}, should_retrain: {should_retrain}")
@@ -418,7 +449,7 @@ async def check_drift(
 @app.get("/models", response_model=Dict[str, Any])
 @limiter.limit("20/minute")
 async def list_models(
-    request_obj: Request,
+    request: Request,
     current_user: dict = Depends(get_current_active_user)
 ):
     """List all available trained models"""
@@ -451,7 +482,7 @@ async def list_models(
 @app.delete("/models/{model_name}")
 @limiter.limit("5/minute")
 async def delete_model(
-    request_obj: Request,
+    request: Request,
     model_name: str,
     current_user: dict = Depends(get_current_active_user)
 ):
@@ -482,7 +513,7 @@ async def delete_model(
 @app.get("/pipeline/state")
 @limiter.limit("20/minute")
 async def get_pipeline_state(
-    request_obj: Request,
+    request: Request,
     current_user: dict = Depends(get_current_active_user)
 ):
     """Get current pipeline state and statistics"""
@@ -503,6 +534,117 @@ async def get_pipeline_state(
     except Exception as e:
         logger.error(f"Failed to get pipeline state: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to get pipeline state: {str(e)}")
+
+# ==================== Granular Endpoints ====================
+
+@app.post("/data/upload", response_model=UploadResponse)
+@limiter.limit("10/minute")
+async def data_upload(
+    request: Request,
+    file: UploadFile = File(...),
+):
+    try:
+        df = parse_uploaded_file(file)
+        pipeline.ingest(df)
+        preview = df.head(5).fillna("").to_dict(orient="records")
+        return UploadResponse(
+            success=True,
+            message="Data uploaded successfully",
+            num_rows=len(df),
+            num_columns=len(df.columns),
+            columns=df.columns.tolist(),
+            preview=preview
+        )
+    except Exception as e:
+        logger.error(f"Upload failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
+@app.post("/features/engineer", response_model=FeatureEngineerResponse)
+@limiter.limit("10/minute")
+async def feature_engineer(
+    request: Request,
+    body: FeatureEngineerRequest,
+):
+    try:
+        if pipeline.state.value == "idle" or pipeline._raw_data is None:
+            raise HTTPException(status_code=400, detail="No data uploaded yet. Call /data/upload first.")
+            
+        result = pipeline.engineer_features(
+            auto=body.auto_features,
+            transformations=body.transformations,
+            target_column=body.target_column
+        )
+        transformed_df = result['transformed_data']
+        preview = transformed_df.head(5).fillna("").to_dict(orient="records")
+        return FeatureEngineerResponse(
+            success=True,
+            features_created=result['features_created'],
+            original_features=result['original_features'],
+            new_features=result['new_features'],
+            preview=preview
+        )
+    except Exception as e:
+        logger.error(f"Feature engineering failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Feature engineering failed: {str(e)}")
+
+@app.post("/models/train_step", response_model=TrainResponse)
+@limiter.limit("5/minute")
+async def train_step(
+    request: Request,
+    body: TrainStepRequest,
+):
+    try:
+        if pipeline._processed_data is None and pipeline._raw_data is None:
+             raise HTTPException(status_code=400, detail="No data available. Call /data/upload first.")
+             
+        start_time = datetime.now()
+        pipeline.config.model_type = body.model_type
+        pipeline.config.validation_split = body.validation_split
+        
+        # Prepare data and train
+        pipeline.prepare_training_data(target_column=body.target_column)
+        pipeline.train_model(model_type=body.model_type)
+        metrics = pipeline.evaluate_model()
+        model_name = f"{body.model_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        pipeline.save_model(model_name=model_name)
+        
+        execution_time = (datetime.now() - start_time).total_seconds()
+        
+        return TrainResponse(
+            success=True,
+            message=f"Model trained successfully: {model_name}",
+            model_metrics=metrics,
+            model_name=model_name,
+            features_created=pipeline._metrics.features_created,
+            training_time_seconds=execution_time,
+            drift_detected=None
+        )
+    except Exception as e:
+        logger.error(f"Train step failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Train step failed: {str(e)}")
+
+@app.get("/data/preview", response_model=PreviewResponse)
+@limiter.limit("20/minute")
+async def data_preview(
+    request: Request,
+):
+    try:
+        df = pipeline._processed_data if pipeline._processed_data is not None else pipeline._raw_data
+        if df is None:
+            raise HTTPException(status_code=400, detail="No data available")
+        
+        preview = df.head(5).fillna("").to_dict(orient="records")
+        return PreviewResponse(
+            success=True,
+            num_rows=len(df),
+            num_columns=len(df.columns),
+            columns=df.columns.tolist(),
+            preview=preview
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # ==================== Startup/Shutdown Events ====================
 
