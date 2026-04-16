@@ -26,23 +26,21 @@ class TokenData(BaseModel):
 def get_password_hash(password: str) -> str:
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
+import sys
+from pathlib import Path
+
+# Add parent directory to path to import src
+sys.path.append(str(Path(__file__).parent.parent))
+from src.auth_db import AuthDatabase
+
+# Initialize the Auth Database
+auth_db = AuthDatabase()
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
 
-# Fake user DB for demonstration
-FAKE_USERS_DB = {
-    "admin": {
-        "username": "admin",
-        "full_name": "System Admin",
-        "email": "admin@example.com",
-        "hashed_password": get_password_hash("secret123"),
-        "disabled": False,
-    }
-}
-
-def get_user(db, username: str):
-    if username in db:
-        return db[username]
+def get_user(username: str):
+    return auth_db.get_user(username)
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
@@ -69,7 +67,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     except JWTError:
         raise credentials_exception
     
-    user = get_user(FAKE_USERS_DB, username=token_data.username)
+    user = get_user(username=token_data.username)
     if user is None:
         raise credentials_exception
     
