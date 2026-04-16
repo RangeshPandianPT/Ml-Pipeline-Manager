@@ -70,6 +70,20 @@ services:
       - ml-pipeline-network
     restart: unless-stopped
 
+  # React Frontend Dashboard
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile.frontend
+    container_name: ml-pipeline-frontend
+    ports:
+      - "8080:80"
+    networks:
+      - ml-pipeline-network
+    depends_on:
+      - api
+    restart: unless-stopped
+
 networks:
   ml-pipeline-network:
     driver: bridge
