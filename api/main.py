@@ -33,10 +33,11 @@ from api.security import (
     create_access_token,
     get_current_active_user,
     ACCESS_TOKEN_EXPIRE_MINUTES,
-    FAKE_USERS_DB,
     verify_password,
     get_user,
-    get_current_user
+    get_current_user,
+    get_password_hash,
+    auth_db
 )
 from datetime import timedelta
 
@@ -224,7 +225,7 @@ async def health_check(request: Request):
 @app.post("/token", response_model=Token)
 @limiter.limit("10/minute")
 async def login_for_access_token(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
-    user = get_user(FAKE_USERS_DB, form_data.username)
+    user = get_user(form_data.username)
     if not user or not verify_password(form_data.password, user["hashed_password"]):
         raise HTTPException(
             status_code=401,
@@ -653,6 +654,10 @@ async def startup_event():
     """Initialize pipeline on startup"""
     logger.info("ML Pipeline API starting up...")
     logger.info(f"Available models: {get_available_models()}")
+    
+    # Seed default admin if user DB is fresh
+    auth_db.seed_admin_user(get_password_hash("admin123"))
+    logger.info("Auth DB checked and seeded")
 
 @app.on_event("shutdown")
 async def shutdown_event():
