@@ -10,7 +10,7 @@ import numpy as np
 import json
 import logging
 import joblib
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Callable, Union
 from dataclasses import dataclass
@@ -243,7 +243,7 @@ class MLPipeline:
             Ingested DataFrame
         """
         self._state = PipelineState.INGESTING
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         
         try:
             if isinstance(source, pd.DataFrame):
@@ -381,7 +381,7 @@ class MLPipeline:
                     self.drift_monitor.set_reference(current_data, self.ingestion.ingestion_id)
                     return self.drift_monitor._create_empty_report(
                         generate_id("DRIFT_"),
-                        datetime.utcnow().isoformat()
+                        datetime.now(timezone.utc).isoformat()
                     )
             
             # Detect drift
@@ -592,7 +592,7 @@ class MLPipeline:
             hyperparameters=model.get_params() if hasattr(model, 'get_params') else {},
             metrics=self._metrics.model_metrics or {},
             model_path=str(model_path),
-            timestamp=datetime.utcnow().isoformat(),
+            timestamp=datetime.now(timezone.utc).isoformat(),
             is_active=True,
             status="saved"
         )
@@ -646,7 +646,7 @@ class MLPipeline:
         Returns:
             Pipeline results summary
         """
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         results = {
             "status": "started",
             "steps_completed": [],
@@ -722,7 +722,7 @@ class MLPipeline:
             
             # Complete
             self._state = PipelineState.COMPLETED
-            end_time = datetime.utcnow()
+            end_time = datetime.now(timezone.utc)
             self._metrics.execution_time_seconds = (end_time - start_time).total_seconds()
             
             results["status"] = "completed"
@@ -884,7 +884,7 @@ class PipelineWorkflow:
             Summary dict with ingestion, drift, and training info.
         """
         summary: Dict[str, Any] = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "steps_completed": [],
             "drift": None,
             "model_metrics": None,
@@ -1013,7 +1013,7 @@ class PipelineWorkflow:
         logger.info(f"Random Forest retrained — R²={r2:.4f}, RMSE={rmse:.4f}")
 
         # Save model
-        ts = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+        ts = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
         model_id = generate_id("MODEL_")
         model_path = str(self.metadata_dir / f"{model_id}.joblib")
         joblib.dump(model, model_path)
@@ -1037,7 +1037,7 @@ class PipelineWorkflow:
                 entries = []
 
         entry = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "model_path": model_path,
             "r2_score": metrics["r2"],
             "rmse": metrics["rmse"],

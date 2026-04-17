@@ -23,3 +23,9 @@ htmlcov/
 dist/
 build/
 *.egg-info/
+
+# Local logs and artifacts
+pytest_out.txt
+job_logs.txt
+models/MODEL_*
+models/random_forest_*

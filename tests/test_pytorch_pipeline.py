@@ -5,6 +5,7 @@ Unit tests for PyTorch Deep Learning integration
 import pytest
 import pandas as pd
 import numpy as np
+import torch
 import sys
 from pathlib import Path
 
@@ -20,6 +21,8 @@ from src.ingestion import create_sample_dataset
 def sample_regression_data():
     """Create sample dataset for regression"""
     df = create_sample_dataset(n_samples=100, n_features=4)
+    np.random.seed(42)
+    torch.manual_seed(42)
     df['target'] = df['feature_1'].fillna(0) * 2.5 + df['feature_2'].fillna(0) * -1.5 + np.random.randn(100)
     return df
 
@@ -28,6 +31,8 @@ def sample_regression_data():
 def sample_classification_data():
     """Create sample dataset for classification"""
     df = create_sample_dataset(n_samples=100, n_features=4)
+    np.random.seed(42)
+    torch.manual_seed(42)
     # create a simple binary target
     df['target'] = (df['feature_1'].fillna(0) + df['feature_2'].fillna(0) > 0).astype(int)
     return df
