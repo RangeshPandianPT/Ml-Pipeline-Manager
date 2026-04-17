@@ -7,7 +7,7 @@ Domain-agnostic implementation suitable for any dataset.
 import pandas as pd
 import numpy as np
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Any, Optional, Tuple, Callable
 from dataclasses import dataclass, field
 from scipy import stats
@@ -381,7 +381,7 @@ class DriftMonitor:
             raise ValueError("Reference data not set. Call set_reference() first.")
         
         drift_id = generate_id("DRIFT_")
-        timestamp = datetime.utcnow().isoformat()
+        timestamp = datetime.now(timezone.utc).isoformat()
         
         # Determine columns to test
         if columns is None:

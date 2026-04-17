@@ -10,7 +10,7 @@ import numpy as np
 import hashlib
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional, Dict, Any, Union, List, Callable, Type
 from dataclasses import dataclass
@@ -88,7 +88,7 @@ class MockWeatherAPI:
             wind_speed_kmh, pressure_hpa, precipitation_mm, weather_condition
         """
         np.random.seed(self.seed)
-        base_time = datetime.utcnow() - timedelta(days=self.n_records)
+        base_time = datetime.now(timezone.utc) - timedelta(days=self.n_records)
         timestamps = [base_time + timedelta(hours=i) for i in range(self.n_records)]
 
         data = {
@@ -339,7 +339,7 @@ class DataIngestion:
                 logger.warning(f"Schema issues detected — continuing with available data")
 
         # 5. Save raw data to landing folder
-        ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         landing_file = self.landing_path / f"raw_data_{ts}.csv"
         combined_df.to_csv(landing_file, index=False)
         logger.info(f"Raw data saved to landing folder: {landing_file}")
@@ -399,7 +399,7 @@ class DataIngestion:
                 rows_ingested=len(df),
                 columns=df.columns.tolist(),
                 data_hash=data_hash,
-                timestamp=datetime.utcnow().isoformat(),
+                timestamp=datetime.now(timezone.utc).isoformat(),
                 status="success"
             )
             self.db.log_ingestion(log)
@@ -425,7 +425,7 @@ class DataIngestion:
                 rows_ingested=0,
                 columns=[],
                 data_hash="",
-                timestamp=datetime.utcnow().isoformat(),
+                timestamp=datetime.now(timezone.utc).isoformat(),
                 status="failed",
                 error_message=str(e)
             )
@@ -469,7 +469,7 @@ class DataIngestion:
                 rows_ingested=len(df),
                 columns=df.columns.tolist(),
                 data_hash=data_hash,
-                timestamp=datetime.utcnow().isoformat(),
+                timestamp=datetime.now(timezone.utc).isoformat(),
                 status="success"
             )
             self.db.log_ingestion(log)
@@ -521,7 +521,7 @@ class DataIngestion:
                 rows_ingested=len(df),
                 columns=df.columns.tolist(),
                 data_hash=data_hash,
-                timestamp=datetime.utcnow().isoformat(),
+                timestamp=datetime.now(timezone.utc).isoformat(),
                 status="success"
             )
             self.db.log_ingestion(log)
@@ -574,7 +574,7 @@ class DataIngestion:
                 rows_ingested=len(df),
                 columns=df.columns.tolist(),
                 data_hash=data_hash,
-                timestamp=datetime.utcnow().isoformat(),
+                timestamp=datetime.now(timezone.utc).isoformat(),
                 status="success"
             )
             self.db.log_ingestion(log)

@@ -6,7 +6,7 @@ Supports SQLite and PostgreSQL for storing pipeline metadata.
 import sqlite3
 import json
 import hashlib
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, asdict
 from pathlib import Path
@@ -310,7 +310,7 @@ class MetadataDatabase:
             min_val,
             max_val,
             json.dumps(sample_data[:1000]),  # Store max 1000 samples
-            datetime.utcnow().isoformat()
+            datetime.now(timezone.utc).isoformat()
         ))
         conn.commit()
     
@@ -383,6 +383,6 @@ class MetadataDatabase:
 
 def generate_id(prefix: str = "") -> str:
     """Generate a unique ID with timestamp."""
-    timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
-    hash_part = hashlib.md5(str(datetime.utcnow().timestamp()).encode()).hexdigest()[:8]
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+    hash_part = hashlib.md5(str(datetime.now(timezone.utc).timestamp()).encode()).hexdigest()[:8]
     return f"{prefix}{timestamp}_{hash_part}"

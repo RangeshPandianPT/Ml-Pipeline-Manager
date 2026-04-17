@@ -6,7 +6,7 @@ import sqlite3
 from typing import Dict, Any, Optional
 from pathlib import Path
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +63,7 @@ class AuthDatabase:
                 "admin@example.com",
                 hashed_password,
                 0,
-                datetime.utcnow().isoformat()
+                datetime.now(timezone.utc).isoformat()
             ))
             conn.commit()
             logger.info("Default admin user seeded successfully")

@@ -7,7 +7,7 @@ Domain-agnostic implementation suitable for any dataset.
 import pandas as pd
 import numpy as np
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Callable, Dict, List, Any, Optional, Union
 from functools import wraps
 from dataclasses import dataclass, field
@@ -69,7 +69,7 @@ def transformation(name: str = None, log_execution: bool = True):
         
         @wraps(func)
         def wrapper(df: pd.DataFrame, columns: List[str] = None, **kwargs):
-            start_time = datetime.utcnow()
+            start_time = datetime.now(timezone.utc)
             original_cols = set(df.columns)
             
             try:
@@ -78,7 +78,7 @@ def transformation(name: str = None, log_execution: bool = True):
                 new_cols = set(result.columns) - original_cols
                 
                 if log_execution:
-                    duration = (datetime.utcnow() - start_time).total_seconds()
+                    duration = (datetime.now(timezone.utc) - start_time).total_seconds()
                     logger.info(f"Transformation '{transform_name}' completed in {duration:.3f}s")
                     if new_cols:
                         logger.info(f"New columns created: {new_cols}")
@@ -518,7 +518,7 @@ class FeatureEngineer:
                 transformations_applied=applied_transforms,
                 features_created=result_df.shape[1] - original_shape[1],
                 features_dropped=len(set(self._original_columns) - set(result_df.columns)),
-                timestamp=datetime.utcnow().isoformat(),
+                timestamp=datetime.now(timezone.utc).isoformat(),
                 status="success"
             )
             self.db.log_feature_engineering(log)
@@ -537,7 +537,7 @@ class FeatureEngineer:
                 transformations_applied=applied_transforms,
                 features_created=0,
                 features_dropped=0,
-                timestamp=datetime.utcnow().isoformat(),
+                timestamp=datetime.now(timezone.utc).isoformat(),
                 status="failed",
                 error_message=str(e)
             )
