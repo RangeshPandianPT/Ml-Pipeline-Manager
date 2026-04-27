@@ -16,6 +16,7 @@ venv.bak/
 logs/
 data/
 pipeline_metadata.db
+auth_metadata.db
 mlruns/
 .pytest_cache/
 .coverage
