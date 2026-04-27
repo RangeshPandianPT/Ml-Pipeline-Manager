@@ -24,7 +24,7 @@ function authHeaders(): HeadersInit {
 /** Auto-login using the backend's dummy credentials if not authenticated */
 export async function ensureAuth() {
   if (!token) {
-    await login("admin", "secret123");
+    await login("admin", "admin123");
   }
 }
 
