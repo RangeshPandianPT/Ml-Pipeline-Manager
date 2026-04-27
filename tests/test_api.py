@@ -16,10 +16,16 @@ from api.main import app
 from src.ingestion import create_sample_dataset
 
 
-client = TestClient(app)
+@pytest.fixture
+def client():
+    """Use context-managed TestClient so startup/shutdown events run."""
+    with TestClient(app) as test_client:
+        yield test_client
 
-def get_auth_headers():
-    response = client.post("/token", data={"username": "admin", "password": "secret123"})
+
+def get_auth_headers(client: TestClient):
+    response = client.post("/token", data={"username": "admin", "password": "admin123"})
+    assert response.status_code == 200, response.text
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
 
@@ -27,13 +33,13 @@ def get_auth_headers():
 class TestAPIEndpoints:
     """Test FastAPI endpoints"""
     
-    def test_root_endpoint(self):
+    def test_root_endpoint(self, client):
         """Test root endpoint"""
         response = client.get("/")
         assert response.status_code == 200
         assert "message" in response.json()
     
-    def test_health_check(self):
+    def test_health_check(self, client):
         """Test health check endpoint"""
         response = client.get("/health")
         assert response.status_code == 200
@@ -41,30 +47,30 @@ class TestAPIEndpoints:
         assert data["status"] == "healthy"
         assert "version" in data
     
-    def test_unauthorized_access(self):
+    def test_unauthorized_access(self, client):
         """Test accessing protected route without token"""
         response = client.get("/pipeline/state")
         assert response.status_code == 401
         
-    def test_list_models(self):
+    def test_list_models(self, client):
         """Test list models endpoint"""
-        headers = get_auth_headers()
+        headers = get_auth_headers(client)
         response = client.get("/models", headers=headers)
         assert response.status_code == 200
         data = response.json()
         assert "success" in data
         assert "models" in data
     
-    def test_pipeline_state(self):
+    def test_pipeline_state(self, client):
         """Test pipeline state endpoint"""
-        headers = get_auth_headers()
+        headers = get_auth_headers(client)
         response = client.get("/pipeline/state", headers=headers)
         assert response.status_code == 200
         data = response.json()
         assert "success" in data
         assert "state" in data
     
-    def test_train_endpoint(self):
+    def test_train_endpoint(self, client):
         """Test model training endpoint"""
         # Create sample data
         df = create_sample_dataset(n_samples=100, n_features=5)
@@ -89,7 +95,7 @@ class TestAPIEndpoints:
         }
         
         # Make request
-        headers = get_auth_headers()
+        headers = get_auth_headers(client)
         response = client.post("/train", data=data, files=files, headers=headers)
         
         assert response.status_code == 200
