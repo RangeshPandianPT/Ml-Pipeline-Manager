@@ -7,3 +7,4 @@ aiofiles==23.2.1
 python-jose[cryptography]==3.3.0
 bcrypt>=4.0.0
 slowapi==0.1.8
+prometheus-fastapi-instrumentator==6.1.0
