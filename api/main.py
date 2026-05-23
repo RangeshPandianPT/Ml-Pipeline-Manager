@@ -5,7 +5,9 @@ Production-ready API for model training, prediction, and monitoring
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, BackgroundTasks, Depends, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse, FileResponse
+from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel, Field, validator
 from typing import Optional, List, Dict, Any, Union
 from fastapi.security import OAuth2PasswordRequestForm
@@ -51,7 +53,14 @@ app = FastAPI(
     description="Production-ready MLOps API for automated feature engineering, drift monitoring, and model training",
     version="2.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    contact={
+        "name": "ML Pipeline Support",
+        "email": "support@mlpipeline.local",
+    },
+    license_info={
+        "name": "MIT",
+    }
 )
 
 # Setup SlowAPI Limiter
@@ -68,6 +77,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# GZip middleware for compressing large responses
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Global pipeline instance
 pipeline = MLPipeline()
@@ -199,7 +211,7 @@ def get_available_models() -> List[str]:
 
 # ==================== API Endpoints ====================
 
-@app.get("/", response_model=Dict[str, str])
+@app.get("/", response_model=Dict[str, str], tags=["System"])
 @limiter.limit("20/minute")
 async def root(request: Request):
     """Root endpoint"""
@@ -210,7 +222,7 @@ async def root(request: Request):
         "health": "/health"
     }
 
-@app.get("/health", response_model=HealthResponse)
+@app.get("/health", response_model=HealthResponse, tags=["System"])
 @limiter.limit("20/minute")
 async def health_check(request: Request):
     """Health check endpoint"""
@@ -222,7 +234,7 @@ async def health_check(request: Request):
         timestamp=datetime.now().isoformat()
     )
 
-@app.post("/token", response_model=Token)
+@app.post("/token", response_model=Token, tags=["Authentication"])
 @limiter.limit("10/minute")
 async def login_for_access_token(request: Request, form_data: OAuth2PasswordRequestForm = Depends()):
     user = get_user(form_data.username)
@@ -253,7 +265,7 @@ def train_request_form(
         validation_split=validation_split
     )
 
-@app.post("/train", response_model=TrainResponse)
+@app.post("/train", response_model=TrainResponse, tags=["Core ML"])
 @limiter.limit("5/minute")
 async def train_model(
     request: Request,
@@ -323,7 +335,7 @@ async def train_model(
         logger.error(f"Training failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Training failed: {str(e)}")
 
-@app.post("/predict", response_model=PredictResponse)
+@app.post("/predict", response_model=PredictResponse, tags=["Core ML"])
 @limiter.limit("10/minute")
 async def predict(
     request: Request, 
@@ -385,7 +397,7 @@ async def predict(
         logger.error(f"Prediction failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
 
-@app.post("/drift/check", response_model=DriftResponse)
+@app.post("/drift/check", response_model=DriftResponse, tags=["Monitoring"])
 @limiter.limit("5/minute")
 async def check_drift(
     request: Request,
@@ -447,7 +459,7 @@ async def check_drift(
         logger.error(f"Drift check failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Drift check failed: {str(e)}")
 
-@app.get("/models", response_model=Dict[str, Any])
+@app.get("/models", response_model=Dict[str, Any], tags=["Model Management"])
 @limiter.limit("20/minute")
 async def list_models(
     request: Request,
@@ -480,7 +492,7 @@ async def list_models(
         logger.error(f"Failed to list models: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to list models: {str(e)}")
 
-@app.delete("/models/{model_name}")
+@app.delete("/models/{model_name}", tags=["Model Management"])
 @limiter.limit("5/minute")
 async def delete_model(
     request: Request,
@@ -511,7 +523,7 @@ async def delete_model(
         logger.error(f"Failed to delete model: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to delete model: {str(e)}")
 
-@app.get("/pipeline/state")
+@app.get("/pipeline/state", tags=["System"])
 @limiter.limit("20/minute")
 async def get_pipeline_state(
     request: Request,
@@ -538,7 +550,7 @@ async def get_pipeline_state(
 
 # ==================== Granular Endpoints ====================
 
-@app.post("/data/upload", response_model=UploadResponse)
+@app.post("/data/upload", response_model=UploadResponse, tags=["Data Pipeline"])
 @limiter.limit("10/minute")
 async def data_upload(
     request: Request,
@@ -560,7 +572,7 @@ async def data_upload(
         logger.error(f"Upload failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
 
-@app.post("/features/engineer", response_model=FeatureEngineerResponse)
+@app.post("/features/engineer", response_model=FeatureEngineerResponse, tags=["Data Pipeline"])
 @limiter.limit("10/minute")
 async def feature_engineer(
     request: Request,
@@ -588,7 +600,7 @@ async def feature_engineer(
         logger.error(f"Feature engineering failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Feature engineering failed: {str(e)}")
 
-@app.post("/models/train_step", response_model=TrainResponse)
+@app.post("/models/train_step", response_model=TrainResponse, tags=["Core ML"])
 @limiter.limit("5/minute")
 async def train_step(
     request: Request,
@@ -624,7 +636,7 @@ async def train_step(
         logger.error(f"Train step failed: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Train step failed: {str(e)}")
 
-@app.get("/data/preview", response_model=PreviewResponse)
+@app.get("/data/preview", response_model=PreviewResponse, tags=["Data Pipeline"])
 @limiter.limit("20/minute")
 async def data_preview(
     request: Request,
@@ -654,6 +666,10 @@ async def startup_event():
     """Initialize pipeline on startup"""
     logger.info("ML Pipeline API starting up...")
     logger.info(f"Available models: {get_available_models()}")
+    
+    # Initialize Prometheus metrics
+    Instrumentator().instrument(app).expose(app)
+    logger.info("Prometheus metrics initialized on /metrics")
     
     # Seed default admin if user DB is fresh
     auth_db.seed_admin_user(get_password_hash("admin123"))
