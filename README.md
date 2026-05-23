@@ -34,7 +34,8 @@
 ### Advanced Features
 - **Model Registry**: Version control and stage management
 - **Batch Predictions**: Efficient bulk inference
-- **Real-time Monitoring**: Live drift detection dashboard
+- **Real-time Monitoring**: Prometheus metrics and live drift detection
+- **Performance**: GZip compression for API responses
 - **Comprehensive Logging**: SQLite/PostgreSQL metadata tracking
 - **Docker Deployment**: One-command full-stack deployment
 - **CI/CD Ready**: GitHub Actions workflow included
