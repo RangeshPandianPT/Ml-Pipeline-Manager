@@ -117,15 +117,12 @@ pytest tests/ -v --cov=.
 ## 📈 Next Steps (Optional)
 
 ### Immediate
-- Add API authentication (JWT)
-- Implement rate limiting
 - Add integration tests
 
 ### Future
 - Deep learning support (PyTorch)
 - AutoML integration
 - Cloud deployment guides
-- Real-time monitoring (Prometheus/Grafana)
 
 ## ✨ Status: Production Ready
 
