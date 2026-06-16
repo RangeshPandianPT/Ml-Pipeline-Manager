@@ -343,7 +343,7 @@ with st.sidebar:
     st.subheader("🤖 Model Settings")
     model_type = st.selectbox(
         "Model Type",
-        ["random_forest", "gradient_boosting", "xgboost", "linear", "logistic_regression"],
+        ["random_forest", "gradient_boosting", "xgboost", "linear", "logistic_regression", "pytorch_nn"],
         help="Select the machine learning algorithm"
     )
     
