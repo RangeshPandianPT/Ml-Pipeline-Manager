@@ -96,7 +96,7 @@ class TrainRequest(BaseModel):
     
     @validator('model_type')
     def validate_model_type(cls, v):
-        allowed = ['random_forest', 'gradient_boosting', 'linear', 'logistic_regression', 'xgboost']
+        allowed = ['random_forest', 'gradient_boosting', 'linear', 'logistic_regression', 'xgboost', 'pytorch_nn']
         if v not in allowed:
             raise ValueError(f"model_type must be one of {allowed}")
         return v
