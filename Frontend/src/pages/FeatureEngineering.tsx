@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import NeonButton from "@/components/NeonButton";
 import DataTable from "@/components/DataTable";
 import { Check } from "lucide-react";
+import { fetchDataPreview, runFeatureEngineering } from "@/lib/api";
 
 const transformations = [
   { id: "auto", label: "Auto Feature Engineering", desc: "Automatically generate polynomial & interaction features" },
@@ -21,8 +22,7 @@ const FeatureEngineering = () => {
   const [resultData, setResultData] = useState<{headers: string[], rows: any[][], stats: any} | null>(null);
 
   useEffect(() => {
-    fetch("http://localhost:8000/data/preview")
-      .then(res => res.json())
+    fetchDataPreview()
       .then(data => {
         if(data.success) {
           setColumns(data.columns);
@@ -45,18 +45,11 @@ const FeatureEngineering = () => {
     toast.loading("Running feature engineering...");
     
     try {
-      const res = await fetch("http://localhost:8000/features/engineer", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          target_column: target,
-          auto_features: selected.includes("auto"),
-          transformations: selected.filter(x => x !== "auto")
-        })
+      const data = await runFeatureEngineering({
+        target_column: target,
+        auto_features: selected.includes("auto"),
+        transformations: selected.filter(x => x !== "auto")
       });
-      
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail || "Failed to engineer features");
       
       const preview = data.preview || [];
       const headers = preview.length > 0 ? Object.keys(preview[0]) : [];
