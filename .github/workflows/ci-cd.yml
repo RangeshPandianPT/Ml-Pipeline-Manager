@@ -96,5 +96,27 @@ jobs:
         # Examples:
         # - Deploy to AWS ECS
         # - Deploy to Azure Container Instances
-        # - Deploy to Kubernetes
         # - Deploy to Heroku
+
+  frontend-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20'
+        
+    - name: Install dependencies
+      working-directory: ./Frontend
+      run: npm ci || npm install
+      
+    - name: Install Playwright Browsers
+      working-directory: ./Frontend
+      run: npx playwright install --with-deps
+      
+    - name: Run Playwright tests
+      working-directory: ./Frontend
+      run: npx playwright test
