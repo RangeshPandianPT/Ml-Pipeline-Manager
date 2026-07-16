@@ -5,6 +5,7 @@ import FileUploadZone from "@/components/FileUploadZone";
 import DataTable from "@/components/DataTable";
 import { chartTooltipStyle, chartGridColor, chartTickStyle } from "@/lib/chartTheme";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { uploadData } from "@/lib/api";
 
 const mockData = {
   headers: ["ID", "Name", "Age", "Income", "Category", "Score"],
@@ -41,13 +42,7 @@ const DataIngestion = () => {
       const formData = new FormData();
       formData.append("file", file);
       
-      const res = await fetch("http://localhost:8000/data/upload", {
-        method: "POST",
-        body: formData,
-      });
-      
-      if (!res.ok) throw new Error("Failed to upload");
-      const data = await res.json();
+      const data = await uploadData(file);
       
       const headers = data.columns;
       const rows = data.preview.map((row: any) => headers.map((h: string) => row[h]));
