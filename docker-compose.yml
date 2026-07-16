@@ -75,6 +75,8 @@ services:
     build:
       context: ./Frontend
       dockerfile: Dockerfile.frontend
+      args:
+        - VITE_API_URL=http://localhost:8000
     container_name: ml-pipeline-frontend
     ports:
       - "8080:80"
